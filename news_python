@@ -1,5 +1,5 @@
 #News Article Recommender
-#Bibin Paul
+#Team PGS
 #Libraries Import
 import numpy as np
 import pandas as pd
@@ -67,20 +67,24 @@ uvh = pd.DataFrame()
 length = train['uvh'].str.len()
 length = length / 8
 length=length.apply(np.floor)
-uvh['length']=length
-uvh['uvh']=train.uvh
-uvh['occr'] = train.uvh.str.count('-')
+uvh['articles clicked']=length
+uvh['last_day'] = train.uvh.str.count('-')
 temp=train['uvh'].str.contains('0-S')
 l=train['uvh'].count()
 for i in range(l):
     if temp[i] is True:
-        uvh['days']=0
+        uvh['days_visited']=0
     else:
-        uvh['days'] = train.uvh.str.split(r'S|-').str[2]
+        uvh['days_visited'] = train.uvh.str.split(r'S|-').str[2]
 uvh=uvh.fillna(0)
-uvh['days']=uvh['days'].astype(int)+1
+uvh['days_visited']=uvh['days_visited'].astype(int)+1
 
-
+#filling missing values
+train['Concepts_Score']=train['Concepts_Score'].fillna(train['Concepts_Score'].median())
+train['Keywords_Score']=train['Keywords_Score'].fillna(train['Keywords_Score'].median())
+train['geo']=train['geo'].fillna(train['geo'].value_counts().idxmax())
+train['site_id']=train['site_id'].fillna(train['site_id'].value_counts().idxmax())
+train['adunit_id']=train['adunit_id'].fillna(train['adunit_id'].value_counts().idxmax())
 
 X = train.drop('click', axis=1)
 y = train.click
