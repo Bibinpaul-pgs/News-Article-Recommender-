@@ -1,0 +1,98 @@
+#News Article Recommender
+#Bibin Paul
+#Libraries Import
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from catboost import CatBoostClassifier
+
+#Import Data
+#Train data
+train1=pd.read_csv('Train/Train_1.csv')
+train2=pd.read_csv('Train/Train_2.csv')
+train3=pd.read_csv('Train/Train_3.csv')
+train4=pd.read_csv('Train/Train_4.csv')
+train5=pd.read_csv('Train/Train_5.csv')
+train6=pd.read_csv('Train/Train_6.csv')
+train7=pd.read_csv('Train/Train_7.csv')
+train8=pd.read_csv('Train/Train_8.csv')
+train9=pd.read_csv('Train/Train_9.csv')
+train10=pd.read_csv('Train/Train_10.csv')
+train=pd.concat([train1,train2,train3,train4,train5,train6,train7,train8,train9,train10])
+#Test data
+test=pd.read_csv('Test/test-data.csv')
+
+#Balancing dataset using Random sampling
+train_1=train.loc[train['click'] == 1]
+train_2=train.loc[train['click'] == 2]
+train=train_1.sample(800000)
+train=pd.concat([train,train_2])
+
+#Merging train data with the Impression atrributes
+impression_Attribute=pd.read_csv('impression_attr_1.csv')
+impression_Attribute= impression_Attribute.drop(['refrenceUrl', 'timestamp_impression'], axis=1)
+data=pd.DataFrame
+data=pd.merge(train, impression_Attribute, how='left', on='impression_id')
+for i in range(2,17):
+    name='impression_Attributes\impression_attr_'+str(i)+'.csv'
+    impression_Attribute=pd.read_csv(name)
+    impression_Attribute.drop_duplicates()
+    impression_Attribute = impression_Attribute.drop(['refrenceUrl', 'timestamp_impression'], axis=1)
+    temp=pd.merge(train,impression_Attribute,how='left',on='impression_id')
+    data=data.append(temp)
+train=data
+
+#Merging test data with the Impression atrributes
+impression_Attribute=pd.read_csv('impression_attr_1.csv')
+impression_Attribute=impression_Attribute.drop(['refrenceUrl','timestamp_impression'],axis=1)
+datatest=pd.DataFrame
+datatest=pd.merge(train, impression_Attribute, how='inner', on='impression_id')
+for i in range(2,17):
+    name='impression_Attributes\impression_attr_'+str(i)+'.csv'
+    impression_Attribute=pd.read_csv(name)
+    impression_Attribute.drop_duplicates()
+    impression_Attribute = impression_Attribute.drop(['refrenceUrl', 'timestamp_impression'], axis=1)
+    temp=pd.merge(test,impression_Attribute,how='inner',on='impression_id')
+    datatest=datatest.append(temp)
+test=datatest
+
+#Merging train data with Item_Category_Map
+item_category_1=pd.read_excel('Item_Category_map/Item_Category_Map_1.xlsx')
+item_category_2=pd.read_excel('Item_Category_map/Item_Category_Map_2.xlsx')
+item_category=pd.concat([item_category_1,item_category_2])
+train = pd.merge(train, item_category, how="left", on=["item_id"])
+
+#freature engineering in uvh column
+uvh = pd.DataFrame()
+length = train['uvh'].str.len()
+length = length / 8
+length=length.apply(np.floor)
+uvh['length']=length
+uvh['uvh']=train.uvh
+uvh['occr'] = train.uvh.str.count('-')
+temp=train['uvh'].str.contains('0-S')
+l=train['uvh'].count()
+for i in range(l):
+    if temp[i] is True:
+        uvh['days']=0
+    else:
+        uvh['days'] = train.uvh.str.split(r'S|-').str[2]
+uvh=uvh.fillna(0)
+uvh['days']=uvh['days'].astype(int)+1
+
+
+
+X = train.drop('click', axis=1)
+y = train.click
+
+X_train, X_validation, y_train, y_validation = train_test_split(X, y, train_size=0.75)
+categorical_features_indices = np.where(X.dtypes != np.float)[0]
+model = CatBoostClassifier(iterations=100, depth=0.14, learning_rate=1, loss_function='Logloss', logging_level='Verbose')
+model.fit(X,y,cat_features=categorical_features_indices,eval_set=(X_validation, y_validation))
+result=model.predict(test)
+
+submission = pd.DataFrame()
+submission['impression_id'] = test['impression_id']
+submission['item_id'] = test['item_id']
+submission['click']=result
+submission.to_csv("submission.csv",index=False)
