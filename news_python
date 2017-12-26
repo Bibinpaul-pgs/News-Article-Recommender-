@@ -60,6 +60,8 @@ test=datatest
 item_category_1=pd.read_excel('Item_Category_map/Item_Category_Map_1.xlsx')
 item_category_2=pd.read_excel('Item_Category_map/Item_Category_Map_2.xlsx')
 item_category=pd.concat([item_category_1,item_category_2])
+#the values of Concepts_Score and Keywords_Score done in R programming, so the code is not available 
+#fropm the list of the values of Concepts_Score and Keywords_Score the largest value is taken
 train = pd.merge(train, item_category, how="left", on=["item_id"])
 
 #freature engineering in uvh column
